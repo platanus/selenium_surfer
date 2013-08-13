@@ -26,7 +26,7 @@ module SeleniumSurfer
         raise ConfigurationError.new 'must provide a webdriver type' if driver_name.nil?
 
         @driver = case driver_name.to_sym
-        when 'remote'
+        when :remote
           url = SeleniumSurfer.config[:remote_host]
 
           # setup a custom client to use longer timeouts
