@@ -25,7 +25,7 @@ module SeleniumSurfer
         driver_name = SeleniumSurfer.config[:webdriver]
         raise ConfigurationError.new 'must provide a webdriver type' if driver_name.nil?
 
-        @driver = case driver_name.to_sym
+        case driver_name.to_sym
         when :remote
           url = SeleniumSurfer.config[:remote_host]
 
@@ -36,6 +36,9 @@ module SeleniumSurfer
           @driver = Selenium::WebDriver.for :remote, :url => url, :http_client => client
         else
           @driver = Selenium::WebDriver.for driver_name.to_sym
+
+          # apply browser configuration to new driver
+          @driver.manage.window.resize_to(SeleniumSurfer.config[:window_width], SeleniumSurfer.config[:window_height]) rescue nil
         end
       end
 
@@ -66,12 +69,12 @@ module SeleniumSurfer
     end
 
     # unbinds the currently bound context.
-    def unbind(_force_reset=false)
+    def unbind
       if @bound_ctx
         @bound_ctx.on_unbind if @bound_ctx.respond_to? :on_unbind
         @bound_ctx = nil
       end
-      reset if _force_reset or @anonymous # reset bucket if required
+      reset if @anonymous # reset bucket if required
     end
   end
 

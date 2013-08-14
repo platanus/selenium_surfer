@@ -48,7 +48,10 @@ module SeleniumSurfer
         raise
       ensure
         force_reset = session_error or !keep_sessions
-        @@loaded_buckets.each { |b| b.unbind(force_reset) }
+        @@loaded_buckets.each do |bucket|
+          bucket.unbind
+          bucket.reset if force_reset
+        end
         @@loaded_buckets = nil
         @all_buckets = temp unless keep_sessions
       end
@@ -86,7 +89,8 @@ module SeleniumSurfer
       begin
         return _block.call ctx
       ensure
-        bucket.unbind _opt.fetch(:on_exit, :release) == :discard
+        bucket.unbind
+        bucket.reset if _opt.fetch(:on_exit, :release) == :discard
       end
     end
 

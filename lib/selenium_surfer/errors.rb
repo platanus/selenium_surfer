@@ -9,7 +9,19 @@ module SeleniumSurfer
   # Error thrown when a programming setup error is found
   class SetupError < StandardError; end
 
+  # Base class for context errors
+  class ContextError < StandardError
+
+    attr_reader :context, :source
+
+    def initialize(_msg, _context)
+      super _msg
+      @context = _context
+      @source = _context.root_context.page_source # cache page source for future reference
+    end
+  end
+
   # Error thrown when an element operation is attempted in an empty search result set
-  class EmptySetError < StandardError; end
+  class EmptySetError < ContextError; end
 
 end

@@ -11,7 +11,9 @@ module SeleniumSurfer
   @@config = {
     :webdriver => nil,
     :remote_host => 'http://localhost:8080',
-    :remote_timeout => 120
+    :remote_timeout => 120,
+    :window_width => 1500,
+    :window_height => 1000
   }
 
   # Configure through hash

@@ -3,6 +3,7 @@ module SeleniumSurfer
   # ### Base class for robot contexts
   #
   class SurfContext < SearchContext
+    extend Forwardable
 
     # add a macro attribute writer to context.
     #
@@ -36,8 +37,10 @@ module SeleniumSurfer
     macro_attr_accessor :max_retries
 
     def initialize(_bucket, _macro=nil, _stack=nil)
+      super nil, nil
+
       @bucket = _bucket
-      @macro = _macro || {}
+      @macro = _macro || { max_retries: 5 }
       @stack = _stack || []
 
       @bucket.bind self
@@ -58,13 +61,24 @@ module SeleniumSurfer
     # ## Helpers
 
     # retrieves the current driver being used by this context
-    def driver
-      load_driver
+    def driver(_reset=false)
+      raise UnboundContextError.new if not bound?
+      @bucket.reset if _reset
+      @bucket.driver
     end
 
-    # return the current page title
-    def title
-      load_driver.title
+    # delegate some stuff to driver
+    def_delegators 'driver', :title, :current_url, :page_source
+    def_delegators 'driver.navigate', :back, :forward, :refresh
+
+    # return the current page url as an URI
+    def current_uri
+      URI.parse driver.current_url
+    end
+
+    # return the current page cookies as a hash
+    def cookies
+      driver.manage.all_cookies
     end
 
     # navigate to a given url (uses the max_retries setting)
@@ -74,12 +88,12 @@ module SeleniumSurfer
 
       loop do
         begin
-          load_driver(retries > 0).get(_url)
+          driver(retries > 0).get(_url)
           @stack = [] # clear stack after successfull navigation
           break
-        rescue Timeout::Error, Selenium::WebDriver::Error::UnknownError
-          trace "Error when opening #{_url}!"
-          raise if retries >= @max_retries
+        rescue Timeout::Error #, Selenium::WebDriver::Error::UnknownError
+          # TODO: log this
+          raise if retries >= max_retries
           retries += 1
           sleep 1.0
         end
@@ -87,7 +101,7 @@ module SeleniumSurfer
     end
 
     # changes the context
-    # TODO: this method may be unecesary...
+    # TODO: this method may be unnecesary...
     def step(_selector=nil, _options={})
       _options[:css] = _selector if _selector
       new_context = search_elements(_options)
@@ -111,14 +125,8 @@ module SeleniumSurfer
     # release and discard the current driver connection.
     def quit
       return false if not bound?
-      @bucket.unbind true
-      return true
-    end
-
-    # resets the current driver connection, does not release it.
-    def reset
-      return false if not bound?
       @bucket.reset
+      @bucket.unbind
       return true
     end
 
@@ -130,15 +138,9 @@ module SeleniumSurfer
 
   private
 
-    def load_driver(_reset=false)
-      raise UnboundContextError.new if not bound?
-      @bucket.reset if _reset
-      @bucket.driver
-    end
-
     def context
       raise UnboundContextError.new if not bound?
-      @stack.last || [load_driver]
+      @stack.last || [driver]
     end
 
     def observe
