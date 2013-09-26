@@ -46,19 +46,23 @@ module SeleniumSurfer
     # clears and sends_keys to this context main element
     def fill(_value)
       raise EmptySetError.new('Cannot call \'fill\' on an empty set', self) if empty?
-      context.first.clear
-      context.first.send_keys _value
+      wrap_errors do
+        context.first.clear
+        context.first.send_keys _value
+      end
     end
 
     # Any methods missing are forwarded to the main element (first).
     def method_missing(_method, *_args, &_block)
-      m = /^(.*)_all$/.match _method.to_s
-      if m then
-        return [] if empty?
-        context.map { |e| e.send(m[1], *_args, &_block) }
-      else
-        raise EmptySetError.new("Cannot call '#{_method}' on an empty set", self) if empty?
-        context.first.send(_method, *_args, &_block)
+      wrap_errors do
+        m = /^(.*)_all$/.match _method.to_s
+        if m then
+          return [] if empty?
+          context.map { |e| e.send(m[1], *_args, &_block) }
+        else
+          raise EmptySetError.new("Cannot call '#{_method}' on an empty set", self) if empty?
+          context.first.send(_method, *_args, &_block)
+        end
       end
     end
 
@@ -76,12 +80,25 @@ module SeleniumSurfer
 
   private
 
-    def search_elements(_options)
-      context.inject([]) do |r, element|
-        r + element.find_elements(_options)
+    # wrap every selenium errors that happen inside block.
+    def wrap_errors
+      begin
+        yield
+      rescue Selenium::WebDriver::Error::WebDriverError => e
+        raise WebDriverError.new e, self
       end
     end
 
+    # base filtering method, expands current context
+    def search_elements(_options)
+      wrap_errors do
+        context.inject([]) do |r, element|
+          r + element.find_elements(_options)
+        end
+      end
+    end
+
+    # returns the current context
     def context
       @elements
     end
