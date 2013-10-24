@@ -10,6 +10,8 @@ module SeleniumSurfer
     include Enumerable
     extend Forwardable
 
+    TIMEOUT = 10.0 # Default timeout for waiting operations
+
     def initialize(_elements, _parent)
       @elements = _elements
       @parent = _parent
@@ -40,7 +42,35 @@ module SeleniumSurfer
     # searches for elements that match a given selector
     def search(_selector=nil, _options={})
       _options[:css] = _selector if _selector
-      SearchContext.new search_elements(_options), self
+
+      wait_mode = _options.delete :wait
+      if wait_mode
+
+        # retrieve timeout
+        timeout = _options.delete :timeout
+        timeout = TIMEOUT if timeout.nil?
+
+        # use a selenium timeout
+        wait = Selenium::WebDriver::Wait.new(timeout: timeout)
+        wait.until do
+          new_elements = search_elements _options
+
+          # test wait condition
+          ok = case wait_mode
+          when :present then (new_elements.length > 0)
+          when :visible then (new_elements.length > 0 and new_elements.first.displayed?)
+          when :enabled then (new_elements.length > 0 and new_elements.first.displayed? and new_elements.first.enabled?)
+          when :not_present then (new_elements.length == 0)
+          when :not_visible then (not new_elements.any? { |e| e.displayed? })
+          else
+            raise SetupError.new "Invalid wait mode '#{wait_mode}'"
+          end
+
+          SearchContext.new new_elements, self if ok
+        end
+      else
+        SearchContext.new search_elements(_options), self
+      end
     end
 
     # clears and sends_keys to this context main element
