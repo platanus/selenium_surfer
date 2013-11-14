@@ -13,7 +13,8 @@ module SeleniumSurfer
     :remote_host => 'http://localhost:8080',
     :remote_timeout => 120,
     :window_width => 1500,
-    :window_height => 1000
+    :window_height => 1000,
+    :capabilities => nil
   }
 
   # Configure through hash

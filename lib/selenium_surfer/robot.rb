@@ -73,10 +73,10 @@ module SeleniumSurfer
 
       if _session.nil? and not @@block_options.fetch(:nil_sessions, false)
         # create an anonymous bucket
-        bucket = DriverBucket.new nil, true
+        bucket = DriverBucket.new nil, true, _opt[:driver_capabilities]
       else
         bucket = @@all_buckets[_session]
-        bucket = @@all_buckets[_session] = DriverBucket.new _session, false if bucket.nil?
+        bucket = @@all_buckets[_session] = DriverBucket.new _session, false, _opt[:driver_capabilities] if bucket.nil?
         raise SetupError.new 'session already bound' if bucket.bound?
       end
 

@@ -9,10 +9,11 @@ module SeleniumSurfer
 
     attr_reader :session_id
 
-    def initialize(_session_id, _anonymous)
+    def initialize(_session_id, _anonymous, _caps)
       @session_id = _session_id
       @bound_ctx = nil
       @anonymous = _anonymous
+      @caps = _caps
     end
 
     # get the current driver instance, reset it if required
@@ -27,13 +28,18 @@ module SeleniumSurfer
 
         case driver_name.to_sym
         when :remote
+          # select capabilities object
+          caps = SeleniumSurfer.config[:capabilities]
+          caps = @caps if @caps
+          caps = Selenium::WebDriver::Remote::Capabilities.firefox if caps.nil?
+
           url = SeleniumSurfer.config[:remote_host]
 
           # setup a custom client to use longer timeouts
           client = Selenium::WebDriver::Remote::Http::Default.new
           client.timeout = SeleniumSurfer.config[:remote_timeout]
 
-          @driver = Selenium::WebDriver.for :remote, :url => url, :http_client => client
+          @driver = Selenium::WebDriver.for :remote, :url => url, :http_client => client, :desired_capabilities => caps
         else
           @driver = Selenium::WebDriver.for driver_name.to_sym
 
